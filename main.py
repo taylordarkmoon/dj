@@ -1,62 +1,68 @@
-# Импорт модуля для работы с датами (требование ПР1)
-from datetime import date
-
-# --- Исходные данные (простые типы) ---
-event_name = "Python-митап"
-venue_name = "Лофт 'Код'"
-venue_capacity = 50       # Вместимость площадки (int)
-registered_count = 45     # Уже зарегистрировано (int)
-base_price = 1500.0       # Базовая цена (float)
-is_early_bird = True      # Ранняя регистрация (bool)
-event_date = date(2026, 12, 10)
-user_name = "Иван"
-user_role = "participant" # Роль пользователя (str)
+from typing import Any
+import storage
+import events
+import venues
+import registrations
+import utils
 
 
-# --- Функция 1: Проверка доступности мест ---
-def check_availability(capacity, registered):
-    """Проверяет, остались ли свободные места."""
-    if registered < capacity:
-        free_seats = capacity - registered
-        # Преобразование типов при выводе
-        return "Есть места! Свободно: " + str(free_seats)
-    else:
-        return "Мест нет. Регистрация закрыта."
+def show_events(events_list: list[dict[str, Any]]) -> None:
+    """Выводит список всех мероприятий."""
+    if not events_list:
+        print("Мероприятий пока нет.")
+        return
+    for event in events_list:
+        print(
+            f"ID: {event['id']} | {event['name']} | "
+            f"Дата: {event['date']} | Цена: {event['price']} руб."
+        )
 
 
-# --- Функция 2: Расчет стоимости билета ---
-def calculate_price(price, early_bird):
-    """Считает цену с учетом скидки 20% за раннюю регистрацию."""
-    if early_bird == True:
-        discount = price * 0.20
-        final_price = price - discount
-        return final_price
-    else:
-        return price
+def main() -> None:
+    """Точка запуска приложения и главное меню."""
+    venues_list = storage.load_data("venues.json")
+    events_list = storage.load_data("events.json")
+    regs_list = storage.load_data("registrations.json")
+
+    # Начальные данные, если база пуста
+    if not venues_list:
+        venues.add_venue(venues_list, "Лофт 'Код'", 50)
+        storage.save_data("venues.json", venues_list)
+    if not events_list:
+        events.add_event(events_list, "Python-митап", 1, "2026-12-10", 1500.0)
+        storage.save_data("events.json", events_list)
+
+    while True:
+        print("\n=== СЕРВИС МЕРОПРИЯТИЙ ===")
+        print("1. Показать все мероприятия")
+        print("2. Зарегистрироваться на мероприятие")
+        print("3. Проверить статус мест")
+        print("0. Выход")
+        
+        choice = input("Выберите действие: ")
+
+        if choice == "1":
+            show_events(events_list)
+        elif choice == "2":
+            event_id = utils.input_int("Введите ID мероприятия: ")
+            user_name = input("Введите ваше имя: ")
+            success = registrations.create_registration(
+                events_list, venues_list, regs_list, event_id, user_name
+            )
+            if success:
+                storage.save_data("registrations.json", regs_list)
+        elif choice == "3":
+            event_id = utils.input_int("Введите ID мероприятия: ")
+            is_avail = registrations.is_spot_available(
+                events_list, venues_list, regs_list, event_id
+            )
+            print(events.get_event_status(is_avail))
+        elif choice == "0":
+            print("До свидания!")
+            break
+        else:
+            print("Неверный выбор.")
 
 
-# --- Функция 3: Приветствие по роли ---
-def get_greeting(name, role):
-    """Возвращает приветствие в зависимости от роли."""
-    if role == "organizer":
-        return f"Здравствуйте, {name}! Вы вошли как организатор."
-    elif role == "participant":
-        return f"Привет, {name}! Рады видеть вас как участника."
-    else:
-        return f"Привет, {name}! Ваша роль пока не определена."
-
-
-# --- Основной сценарий программы ---
-print("=== СЕРВИС МЕРОПРИЯТИЙ ===")
-print(get_greeting(user_name, user_role))
-print("Мероприятие:", event_name)
-print("Площадка:", venue_name)
-print("Дата проведения:", event_date)
-print("-----------------------------")
-
-# Вызов функций и вывод результатов
-status = check_availability(venue_capacity, registered_count)
-print("Статус мест:", status)
-
-ticket_price = calculate_price(base_price, is_early_bird)
-print("Стоимость билета:", ticket_price, "руб.")
+if __name__ == "__main__":
+    main()

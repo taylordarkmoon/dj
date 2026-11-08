@@ -1,13 +1,8 @@
-# Виртуальное окружение
 venv/
 env/
 .venv/
-
-# Кэш Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Настройки IDE
+.pytest_cache/
 .idea/
 .vscode/
